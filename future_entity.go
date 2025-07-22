@@ -1,4 +1,4 @@
-package future
+package futurego
 
 import "sync"
 

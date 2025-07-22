@@ -1,4 +1,4 @@
-package future
+package futurego
 
 import (
 	"errors"
@@ -11,29 +11,29 @@ func newFuture[T any]() *Future[T] {
 	}
 }
 
-// VoidAsync 异步执行一个无返回值但可能出错的函数。
-// 返回一个 Future[struct{}]，可用于等待或检查错误。
+// VoidAsync runs a function asynchronously that returns no value but may return an error.
+// Returns a Future[struct{}], which can be used to wait or check for errors.
 func VoidAsync(fn func() error) *Future[struct{}] {
 	return newFuture[struct{}]().asyncVoid(func() error {
 		return fn()
 	})
 }
 
-// Async 异步执行一个带返回值和错误的函数。
-// 返回一个 Future[T]，通过 Get 获取结果。
+// Async runs a function asynchronously that returns a value and an error.
+// Returns a Future[T], and the result can be retrieved via Get.
 func Async[T any](fn func() (T, error)) *Future[T] {
 	return newFuture[T]().async(fn)
 }
 
-// WaitAll 会阻塞直到所有传入的 Future 完成。
+// WaitAll blocks until all provided Futures are completed.
 func WaitAll(futures ...future) {
 	for _, future := range futures {
 		<-future.sDone()
 	}
 }
 
-// WaitAllWithTimeout 会阻塞直到所有 Future 完成或超时。
-// 超时返回错误 "wait all timeout"。
+// WaitAllWithTimeout blocks until all Futures are completed or the timeout is reached.
+// Returns error "wait all timeout" if the timeout occurs.
 func WaitAllWithTimeout(timeout time.Duration, futures ...future) error {
 	done := make(chan struct{})
 	go func() {
@@ -80,7 +80,7 @@ func (c *Future[T]) async(fn func() (T, error)) *Future[T] {
 	return c
 }
 
-// Get 阻塞直到异步任务完成并返回结果与错误。
+// Get blocks until the asynchronous task is complete and returns the result and error.
 func (c *Future[T]) Get() (T, error) {
 	<-c.done
 	c.mu.Lock()
@@ -88,8 +88,8 @@ func (c *Future[T]) Get() (T, error) {
 	return c.result, c.err
 }
 
-// GetWithTimout 在指定超时时间内等待异步结果。
-// 如果超时，返回零值和超时错误。
+// GetWithTimout waits for the asynchronous result up to the specified timeout duration.
+// Returns zero value and a timeout error if the wait exceeds the limit.
 func (c *Future[T]) GetWithTimout(afterTime time.Duration) (T, error) {
 	select {
 	case <-c.done:
@@ -102,13 +102,13 @@ func (c *Future[T]) GetWithTimout(afterTime time.Duration) (T, error) {
 	}
 }
 
-// Error 返回异步任务完成后的错误信息。
+// Error returns the error after the asynchronous task is completed.
 func (c *Future[T]) Error() error {
 	_, err := c.Get()
 	return err
 }
 
-// IsDone 判断当前 Future 是否已完成。
+// IsDone checks whether the current Future is completed.
 func (c *Future[T]) IsDone() bool {
 	select {
 	case <-c.sDone():
